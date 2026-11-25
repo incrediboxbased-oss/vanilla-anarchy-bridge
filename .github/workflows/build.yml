@@ -1,3 +1,4 @@
+
 name: Build VAB from ZIP
 
 on:
@@ -14,7 +15,7 @@ jobs:
 
       - name: Find and extract project ZIP
         run: |
-          ZIP=$(find . -maxdepth 2 -iname "VanillaAnarchyBridge.zip" | head -n 1)
+          ZIP=$(find . -maxdepth 3 -iname "VanillaAnarchyBridge.zip" | head -n 1)
           if [ -z "$ZIP" ]; then
             echo "Project ZIP not found!"
             exit 1
@@ -25,6 +26,10 @@ jobs:
       - name: Locate project
         run: |
           DIR=$(find project -name build.gradle -printf '%h\n' | head -n 1)
+          if [ -z "$DIR" ]; then
+            echo "build.gradle not found!"
+            exit 1
+          fi
           echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
 
       - name: Setup Java
@@ -33,17 +38,27 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
       - name: Build mod
         run: |
           cd "$PROJECT_DIR"
           gradle build
 
+      - name: Verify JAR
+        run: |
+          JAR=$(find "$PROJECT_DIR/build/libs" -name '*.jar' ! -name '*sources*' | head -n 1)
+          if [ -z "$JAR" ]; then
+            echo "JAR not found!"
+            exit 1
+          fi
+          echo "JAR size:"
+          ls -lh "$JAR"
+          echo "JAR contents:"
+          jar tf "$JAR"
+          jar tf "$JAR" | grep -q 'VABClient.class' || exit 1
+          jar tf "$JAR" | grep -q 'fabric.mod.json' || exit 1
+
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
           name: VanillaAnarchyBridge
-          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
-          if-no-files-found: error
+          path: ${{ env.PROJECT_DIR }}/build/libs/*-0.1.0.jar
