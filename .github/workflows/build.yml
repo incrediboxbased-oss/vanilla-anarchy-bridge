@@ -40,8 +40,17 @@ jobs:
 
       - name: Build mod
         run: |
+          echo "Project: $PROJECT_DIR"
+          echo "Source files:"
+          find "$PROJECT_DIR/src" -type f
+          echo "Build file:"
+          cat "$PROJECT_DIR/build.gradle"
           cd "$PROJECT_DIR"
-          gradle build
+          gradle clean build
+          echo "Compiled classes:"
+          find build/classes -type f
+          echo "JAR files:"
+          find build/libs -type f -exec ls -lh {} \;
 
       - name: Verify JAR
         run: |
