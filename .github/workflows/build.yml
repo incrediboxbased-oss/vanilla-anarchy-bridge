@@ -1,0 +1,48 @@
+name: Build VAB from ZIP
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and extract project ZIP
+        run: |
+          ZIP=$(find . -maxdepth 2 -iname "VanillaAnarchyBridge.zip" | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "Project ZIP not found!"
+            exit 1
+          fi
+          mkdir project
+          unzip "$ZIP" -d project
+
+      - name: Locate project
+        run: |
+          DIR=$(find project -name build.gradle -printf '%h\n' | head -n 1)
+          echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build mod
+        run: |
+          cd "$PROJECT_DIR"
+          gradle build
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: VanillaAnarchyBridge
+          path: project/**/build/libs/*.jar
