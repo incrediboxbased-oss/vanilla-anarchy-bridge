@@ -46,19 +46,10 @@ jobs:
       - name: Inspect build
         run: |
           cd "$PROJECT_DIR"
-          echo "All JAR files:"
-          find build -type f -name '*.jar' -print
-          echo "Build directories:"
-          find build -maxdepth 4 -type d
-          echo "Compiled classes:"
-          find build/classes -type f
-          echo "Resources:"
-          find build/resources -type f
-          echo "JAR contents:"
-          for JAR in build/libs/*.jar; do
-            echo "===== $JAR ====="
-            jar tf "$JAR"
-          done
+          echo "DEV JAR CONTENTS:"
+          jar tf build/devlibs/vanilla-anarchy-bridge-0.1.0-dev.jar
+          echo "DEV JAR SIZE:"
+          ls -lh build/devlibs/vanilla-anarchy-bridge-0.1.0-dev.jar
       - name: Verify JAR
         run: |
           cd "$PROJECT_DIR"
