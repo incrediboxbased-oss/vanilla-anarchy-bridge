@@ -41,24 +41,31 @@ jobs:
       - name: Build mod
         run: |
           cd "$PROJECT_DIR"
-          gradle clean build
+          gradle wrapper --gradle-version 8.10.2
+          ./gradlew clean build
 
-      - name: Verify dev JAR
+      - name: Verify remapped JAR
         run: |
           cd "$PROJECT_DIR"
-          JAR="build/devlibs/vanilla-anarchy-bridge-0.1.0-dev.jar"
+          JAR="build/libs/vanilla-anarchy-bridge-0.1.0.jar"
+
           if [ ! -f "$JAR" ]; then
-            echo "Dev JAR not found!"
+            echo "Remapped JAR not found!"
             exit 1
           fi
+
+          echo "JAR contents:"
+          jar tf "$JAR"
+
           jar tf "$JAR" | grep -q 'VABClient.class'
           jar tf "$JAR" | grep -q 'BridgeLog.class'
           jar tf "$JAR" | grep -q 'fabric.mod.json'
-          echo "Dev JAR verified!"
+
+          echo "Remapped JAR verification successful!"
           ls -lh "$JAR"
 
       - name: Upload mod
         uses: actions/upload-artifact@v4
         with:
           name: VanillaAnarchyBridge
-          path: ${{ env.PROJECT_DIR }}/build/devlibs/vanilla-anarchy-bridge-0.1.0-dev.jar
+          path: ${{ env.PROJECT_DIR }}/build/libs/vanilla-anarchy-bridge-0.1.0.jar
