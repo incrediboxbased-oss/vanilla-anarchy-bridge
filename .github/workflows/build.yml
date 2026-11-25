@@ -46,15 +46,19 @@ jobs:
       - name: Inspect build
         run: |
           cd "$PROJECT_DIR"
+          echo "All JAR files:"
+          find build -type f -name '*.jar' -print
+          echo "Build directories:"
+          find build -maxdepth 4 -type d
           echo "Compiled classes:"
-          find build/classes/java/main -type f
+          find build/classes -type f
           echo "Resources:"
-          find build/resources/main -type f
-          echo "JAR files:"
-          find build/libs -type f -exec ls -lh {} \;
-          echo "Contents of JAR:"
-          jar tf build/libs/vanilla-anarchy-bridge-0.1.0.jar
-
+          find build/resources -type f
+          echo "JAR contents:"
+          for JAR in build/libs/*.jar; do
+            echo "===== $JAR ====="
+            jar tf "$JAR"
+          done
       - name: Verify JAR
         run: |
           cd "$PROJECT_DIR"
