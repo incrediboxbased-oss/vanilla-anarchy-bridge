@@ -43,24 +43,22 @@ jobs:
           cd "$PROJECT_DIR"
           gradle clean build
 
-      - name: Inspect build
+      - name: Verify dev JAR
         run: |
           cd "$PROJECT_DIR"
-          echo "DEV JAR CONTENTS:"
-          jar tf build/devlibs/vanilla-anarchy-bridge-0.1.0-dev.jar
-          echo "DEV JAR SIZE:"
-          ls -lh build/devlibs/vanilla-anarchy-bridge-0.1.0-dev.jar
-      - name: Verify JAR
-        run: |
-          cd "$PROJECT_DIR"
-          JAR="build/libs/vanilla-anarchy-bridge-0.1.0.jar"
+          JAR="build/devlibs/vanilla-anarchy-bridge-0.1.0-dev.jar"
+          if [ ! -f "$JAR" ]; then
+            echo "Dev JAR not found!"
+            exit 1
+          fi
           jar tf "$JAR" | grep -q 'VABClient.class'
           jar tf "$JAR" | grep -q 'BridgeLog.class'
           jar tf "$JAR" | grep -q 'fabric.mod.json'
-          echo "JAR verification successful!"
+          echo "Dev JAR verified!"
+          ls -lh "$JAR"
 
-      - name: Upload JAR
+      - name: Upload mod
         uses: actions/upload-artifact@v4
         with:
           name: VanillaAnarchyBridge
-          path: ${{ env.PROJECT_DIR }}/build/libs/vanilla-anarchy-bridge-0.1.0.jar
+          path: ${{ env.PROJECT_DIR }}/build/devlibs/vanilla-anarchy-bridge-0.1.0-dev.jar
