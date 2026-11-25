@@ -13,24 +13,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find and extract project ZIP
+      - name: Find project ZIP
         run: |
-          ZIP=$(find . -maxdepth 3 -iname "VanillaAnarchyBridge.zip" | head -n 1)
-          if [ -z "$ZIP" ]; then
-            echo "Project ZIP not found!"
-            exit 1
-          fi
-          mkdir project
-          unzip "$ZIP" -d project
+          ZIP=$(find . -maxdepth 5 -type f -iname "VanillaAnarchyBridge*.zip" | head -n 1)
 
-      - name: Locate project
-        run: |
-          DIR=$(find project -name build.gradle -printf '%h\n' | head -n 1)
-          if [ -z "$DIR" ]; then
-            echo "build.gradle not found!"
+          if [ -z "$ZIP" ]; then
+            echo "::error::VAB ZIP archive not found"
             exit 1
           fi
-          echo "PROJECT_DIR=$DIR" >> "$GITHUB_ENV"
+
+          echo "Found archive: $ZIP"
+          echo "ZIP_PATH=$ZIP" >> "$GITHUB_ENV"
+
+      - name: Extract project
+        run: |
+          mkdir -p project
+          unzip "$ZIP_PATH" -d project
+
+      - name: Locate Gradle project
+        run: |
+          DIR=$(find project -type f -name build.gradle -o -name build.gradle.kts | head -n 1)
+
+          if [ -z "$DIR" ]; then
+            echo "::error::Gradle build file not found"
+            find project -maxdepth 5 -type f
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$DIR")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project located: $PROJECT_DIR"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -38,34 +50,49 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Build mod
+      - name: Build project
         run: |
           cd "$PROJECT_DIR"
-          gradle wrapper --gradle-version 8.10.2
+
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.10.2
+          fi
+
+          chmod +x gradlew
+          ./gradlew --version
           ./gradlew clean build
 
-      - name: Verify remapped JAR
+      - name: Find and verify mod JAR
         run: |
           cd "$PROJECT_DIR"
-          JAR="build/libs/vanilla-anarchy-bridge-0.1.0.jar"
 
-          if [ ! -f "$JAR" ]; then
-            echo "Remapped JAR not found!"
+          echo "Available JARs:"
+          find build -type f -name "*.jar" -size +1k
+
+          FOUND=""
+
+          while IFS= read -r JAR; do
+            if jar tf "$JAR" | grep -q 'VABClient.class' &&
+               jar tf "$JAR" | grep -q 'BridgeLog.class' &&
+               jar tf "$JAR" | grep -q 'fabric.mod.json'; then
+              FOUND="$JAR"
+              break
+            fi
+          done < <(find build -type f -name "*.jar" ! -name "*sources*" ! -name "*dev*" -size +1k)
+
+          if [ -z "$FOUND" ]; then
+            echo "::error::Valid mod JAR was not found"
             exit 1
           fi
 
-          echo "JAR contents:"
-          jar tf "$JAR"
+          echo "Verified: $FOUND"
 
-          jar tf "$JAR" | grep -q 'VABClient.class'
-          jar tf "$JAR" | grep -q 'BridgeLog.class'
-          jar tf "$JAR" | grep -q 'fabric.mod.json'
+          mkdir -p "$GITHUB_WORKSPACE/artifact"
+          cp "$FOUND" "$GITHUB_WORKSPACE/artifact/VanillaAnarchyBridge.jar"
 
-          echo "Remapped JAR verification successful!"
-          ls -lh "$JAR"
-
-      - name: Upload mod
+      - name: Upload final mod
         uses: actions/upload-artifact@v4
         with:
           name: VanillaAnarchyBridge
-          path: ${{ env.PROJECT_DIR }}/build/libs/vanilla-anarchy-bridge-0.1.0.jar
+          path: artifact/VanillaAnarchyBridge.jar
+          if-no-files-found: error
