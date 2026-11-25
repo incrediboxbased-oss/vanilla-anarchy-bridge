@@ -45,4 +45,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: VanillaAnarchyBridge
-          path: project/**/build/libs/*.jar
+          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
+          if-no-files-found: error
